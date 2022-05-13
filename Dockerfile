@@ -4,12 +4,13 @@ FROM ros:noetic
 RUN apt-get update && apt-get install -y \
       python3-catkin-tools \
       python3-pip \
+      git-all \
     && rm -rf /var/lib/apt/lists/*
 
-ADD requirements.txt /requirements.txt
+COPY requirements.txt /requirements.txt
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-ADD catkin_ws /root/catkin_ws
-RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; cd ~/catkin_ws; catkin_make; . ~/catkin_ws/devel/setup.bash'
+RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; export ROS_MASTER_URI=http://192.168.114.211:11311;'
+#  cd ~/catkin_ws; catkin_make; . ~/catkin_ws/devel/setup.bash'
