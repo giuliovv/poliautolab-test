@@ -1,4 +1,4 @@
-prefix=/root/catkin_ws/devel
+prefix=/workspace/catkin_ws/devel
 
 Name: localization
 Description: Description of localization

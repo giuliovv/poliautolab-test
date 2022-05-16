@@ -25,15 +25,43 @@ import rospy
 
 # Ros Messages
 from sensor_msgs.msg import CompressedImage
-# We do not use cv_bridge it does not support CompressedImage in python
-# from cv_bridge import CvBridge, CvBridgeError
+from geometry_msgs.msg import PointStamped
 
 VERBOSE=False
+
+def get_cars(img):
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hsv_color1 = np.array([100, 100, 130])
+    hsv_color2 = np.array([110, 250, 170])
+
+    mask_blue = cv2.inRange(img_hsv, hsv_color1, hsv_color2)
+    kernel = np.ones((2,2), np.uint8)
+    img_erosion = cv2.erode(mask_blue, kernel, iterations=2)
+    img_dilation = cv2.dilate(img_erosion, kernel, iterations=10)
+    rho = 1  # distance resolution in pixels of the Hough grid
+
+    theta = np.pi / 90  # angular resolution in radians of the Hough grid
+    threshold = 20  # minimum number of votes (intersections in Hough grid cell)
+    min_line_length = 20  # minimum number of pixels making up a line
+    max_line_gap = 15  # maximum gap in pixels between connectable line segments
+
+    # cv2.Canny(img_dilation,100,200)
+    lines = cv2.HoughLinesP(cv2.Canny(img_dilation,50,100), rho, theta, threshold, np.array([]), min_line_length, max_line_gap)
+
+    if lines is None:
+        raise ValueError("No lines found")
+    _points = lines.reshape(-1, 2)
+
+    filt = ((_points - _points[0])**2).sum(1) < 70**2
+
+    return _points[filt], _points[~filt]
 
 class image_feature:
 
     def __init__(self):
         '''Initialize ros subscriber'''
+
+        self.coordinates_pub = rospy.Publisher("/watchtower00/localization", PointStamped)
 
         # subscribed Topic
         self.subscriber = rospy.Subscriber("/watchtower00/camera_node/image/compressed",
@@ -49,31 +77,34 @@ class image_feature:
             print(f'received image of type: "{ros_data.format}"' )
 
         #### direct conversion to CV2 ####
-        np_arr = np.fromstring(ros_data.data, np.uint8)
-        image_np = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
-        #image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # OpenCV >= 3.0:
-        
-        #### Feature detectors using CV2 #### 
-        # "","Grid","Pyramid" + 
-        # "FAST","GFTT","HARRIS","MSER","ORB","SIFT","STAR","SURF"
-        method = "GridFAST"
-        feat_det = cv2.FeatureDetector_create(method)
-        time1 = time.time()
+        np_arr = np.frombuffer(ros_data.data, 'u1')
+        image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        # convert np image to grayscale
-        featPoints = feat_det.detect(
-            cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY))
-        time2 = time.time()
-        if VERBOSE :
-            print ('%s detector found: %s points in: %s sec.').format(method,
-                len(featPoints),time2-time1)
+        localized = False
 
-        for featpoint in featPoints:
-            x,y = featpoint.pt
-            cv2.circle(image_np,(int(x),int(y)), 3, (0,0,255), -1)
-        
+        try:
+            first, second = get_cars(image_np)
+            cv2.circle(image_np, first[0], 20, [0,0,255], -1)
+            localized = True
+        except ValueError:
+            print("No lines found.")
+
         cv2.imshow('cv_img', image_np)
         cv2.waitKey(2)
+
+        point = PointStamped()
+        point.header.stamp = rospy.Time.now()
+        point.header.frame_id = "/watchtower00/localization"
+        if localized:
+            point.point.x = first[0,0]
+            point.point.y = first[0,1]
+        else:
+            point.point.x = -1
+            point.point.y = -1
+
+        self.coordinates_pub.publish(point)
+
+        
 
 
 def main(args):
