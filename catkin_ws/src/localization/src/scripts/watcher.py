@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-"""OpenCV feature detectors with ros CompressedImage Topics in python.
+"""Detects duckiebots from the watchtower using their unique colors.
 
-This example subscribes to a ros topic containing sensor_msgs 
-CompressedImage. It converts the CompressedImage into a numpy.ndarray, 
-then detects and marks features in that image. It finally displays 
-and publishes the new image - again as CompressedImage topic.
+Publish on watchtower00/localization a PointStamped with the car coordinates.
+
+Edited version of the original example by Simon Halle.
 """
-__author__ =  'Simon Haller <simon.haller at uibk.ac.at>'
+__author__ =  'Giulio Vaccari <giulio.vaccari at mail.polimi.it>'
 __version__=  '0.1'
 __license__ = 'BSD'
 # Python libs
