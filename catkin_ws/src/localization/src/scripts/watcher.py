@@ -7,7 +7,7 @@ Edited version of the original example by Simon Halle.
 """
 __author__ =  'Giulio Vaccari <giulio.vaccari at mail.polimi.it>'
 __version__=  '0.1'
-__license__ = 'BSD'
+__license__ = 'MIT'
 # Python libs
 import sys, time
 
@@ -118,7 +118,7 @@ def main(args):
     try:
         rospy.spin()
     except KeyboardInterrupt:
-        print("Shutting down ROS Image feature detector module")
+        print("Shutting down localization")
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
