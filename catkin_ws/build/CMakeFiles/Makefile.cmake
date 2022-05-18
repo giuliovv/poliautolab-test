@@ -140,7 +140,6 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/workspace/catkin_ws/src/CMakeLists.txt"
   "/workspace/catkin_ws/src/localization/CMakeLists.txt"
   "/workspace/catkin_ws/src/localization/package.xml"
-  "/workspace/catkin_ws/src/localization/src/scripts/talker.py"
   "/workspace/catkin_ws/src/localization/src/scripts/watcher.py"
   )
 

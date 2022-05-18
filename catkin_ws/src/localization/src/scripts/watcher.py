@@ -26,34 +26,30 @@ import rospy
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import PointStamped
 
-VERBOSE=False
+VERBOSE=True
 
 def get_cars(img):
+    """
+    Returns front and left coord
+    """
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    hsv_color1 = np.array([100, 100, 130])
-    hsv_color2 = np.array([110, 250, 170])
 
-    mask_blue = cv2.inRange(img_hsv, hsv_color1, hsv_color2)
-    kernel = np.ones((2,2), np.uint8)
-    img_erosion = cv2.erode(mask_blue, kernel, iterations=2)
-    img_dilation = cv2.dilate(img_erosion, kernel, iterations=10)
-    rho = 1  # distance resolution in pixels of the Hough grid
+    hsv_color1_blue = np.array([50, 200, 50])
+    hsv_color2_blue = np.array([100, 300, 300])
+    mask_blue = cv2.inRange(img_hsv, hsv_color1_blue, hsv_color2_blue)
 
-    theta = np.pi / 90  # angular resolution in radians of the Hough grid
-    threshold = 20  # minimum number of votes (intersections in Hough grid cell)
-    min_line_length = 20  # minimum number of pixels making up a line
-    max_line_gap = 15  # maximum gap in pixels between connectable line segments
-
-    # cv2.Canny(img_dilation,100,200)
-    lines = cv2.HoughLinesP(cv2.Canny(img_dilation,50,100), rho, theta, threshold, np.array([]), min_line_length, max_line_gap)
-
-    if lines is None:
-        raise ValueError("No lines found")
-    _points = lines.reshape(-1, 2)
-
-    filt = ((_points - _points[0])**2).sum(1) < 70**2
-
-    return _points[filt], _points[~filt]
+    hsv_color1_pink = np.array([100, 50, 200])
+    hsv_color2_pink = np.array([200, 200, 250])
+    mask_pink = cv2.inRange(img_hsv, hsv_color1_pink, hsv_color2_pink)
+    
+    front_coo = np.argwhere(mask_pink==255).mean(axis=0)[::-1]
+    back_coo = np.argwhere(mask_blue==255).mean(axis=0)[::-1]
+    
+    x_center = (front_coo[0] + back_coo[0])/2
+    y_center = (front_coo[1] + back_coo[1])/2
+    angle = np.arctan2(-front_coo[1]+back_coo[1], -front_coo[0]+back_coo[0])
+    
+    return x_center, y_center, angle
 
 class image_feature:
 
@@ -82,8 +78,11 @@ class image_feature:
         localized = False
 
         try:
-            first, second = get_cars(image_np)
-            cv2.circle(image_np, first[0], 20, [0,0,255], -1)
+            x, y, t = get_cars(image_np)
+            if VERBOSE:
+                print(x, y, t)
+                cv2.circle(image_np, [int(x),int(y)], 20, [0,0,255], -1)
+                cv2.arrowedLine(image_np, [int(x),int(y)], [int(x-50*np.cos(t)),int(y-50*np.sin(t))], [0,255,0], 5)
             localized = True
         except ValueError:
             print("No lines found.")
@@ -95,8 +94,8 @@ class image_feature:
         point.header.stamp = rospy.Time.now()
         point.header.frame_id = "/watchtower00/localization"
         if localized:
-            point.point.x = first[0,0]
-            point.point.y = first[0,1]
+            point.point.x = x
+            point.point.y = y
         else:
             point.point.x = -1
             point.point.y = -1
