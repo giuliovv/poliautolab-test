@@ -26,6 +26,8 @@ import rospy
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import PointStamped
 
+from localization.msg import DuckPose
+
 VERBOSE=True
 
 def get_cars(img):
@@ -90,15 +92,19 @@ class image_feature:
         cv2.imshow('cv_img', image_np)
         cv2.waitKey(2)
 
-        point = PointStamped()
-        point.header.stamp = rospy.Time.now()
-        point.header.frame_id = "/watchtower00/localization"
+        pose = DuckPose()
+        pose.header.stamp = rospy.Time.now()
+        pose.header.frame_id = "/watchtower00/localization"
         if localized:
-            point.point.x = x
-            point.point.y = y
+            pose.x = x
+            pose.y = y
+            pose.t = t
+            pose.success = True
         else:
-            point.point.x = -1
-            point.point.y = -1
+            pose.x = -1
+            pose.y = -1
+            pose.t = -1
+            pose.success = False
 
         self.coordinates_pub.publish(point)
 
